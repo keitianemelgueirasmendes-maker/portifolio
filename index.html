@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-chat: #1e293b;
+      --bg-input: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --msg-user: #4f46e5;
+      --msg-other: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 800px;
+      height: 85vh;
+      background-color: var(--bg-chat);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Tela de Login Inicial */
+    #login-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      padding: 40px;
+    }
+
+    #login-screen h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .input-group {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Componentes de Input e Botão */
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      background-color: var(--bg-input);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    button {
+      padding: 14px 24px;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Tela Principal do Chat */
+    #chat-screen {
+      display: none; /* Escondido até o login */
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chat-header {
+      padding: 20px;
+      background-color: rgba(15, 23, 42, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .user-tag {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .messages-container {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Custom Scrollbar */
+    .messages-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .messages-container::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    /* Balões de Mensagem */
+    .message {
+      max-width: 70%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message .meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .message .bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    /* Alinhamentos (Você vs Outros) */
+    .message.me {
+      align-self: flex-end;
+    }
+    .message.me .bubble {
+      background-color: var(--msg-user);
+      border-bottom-right-radius: 4px;
+    }
+    .message.me .meta {
+      text-align: right;
+    }
+
+    .message.other {
+      align-self: flex-start;
+    }
+    .message.other .bubble {
+      background-color: var(--msg-other);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Área de Envio */
+    .chat-footer {
+      padding: 20px;
+      display: flex;
+      gap: 12px;
+      background-color: rgba(15, 23, 42, 0.2);
+    }
+
+    .chat-footer input {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <div id="login-screen">
+      <h1>Bem-vindo ao Chat</h1>
+      <div class="input-group">
+        <input type="text" id="username-input" placeholder="Digite seu nome ou apelido..." autocomplete="off">
+        <button id="login-btn">Entrar no Chat</button>
+      </div>
+    </div>
+
+    <div id="chat-screen">
+      <div class="chat-header">
+        <h2>Sala Geral</h2>
+        <div class="user-tag" id="user-display"></div>
+      </div>
+      
+      <div class="messages-container" id="messages">
+        </div>
+
+      <div class="chat-footer">
+        <input type="text" id="message-input" placeholder="Digite sua mensagem..." autocomplete="off">
+        <button id="send-btn">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    // Importando os módulos necessários para o Realtime Database
+    import { getDatabase, ref, push, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+    // Sua configuração do Firebase fornecida
+    const firebaseConfig = {
+      apiKey: "AIzaSyDfODSsVpSOSFGNpEsGiQE3oJBm6O9koso",
+      authDomain: "labd-2ca.firebaseapp.com",
+      databaseURL: "https://labd-2ca-default-rtdb.firebaseio.com",
+      projectId: "labd-2ca",
+      storageBucket: "labd-2ca.firebasestorage.app",
+      messagingSenderId: "261857921012",
+      appId: "1:261857921012:web:438bc0717f193335de9ba1"
+    };
+
+    // Inicializa o Firebase e o Database
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Variáveis de controle de estado do App
+    let username = "";
+
+    // Elementos do DOM
+    const loginScreen = document.getElementById('login-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const usernameInput = document.getElementById('username-input');
+    const loginBtn = document.getElementById('login-btn');
+    
+    const messagesContainer = document.getElementById('messages');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const userDisplay = document.getElementById('user-display');
+
+    // Referência do nó de mensagens no Firebase
+    const messagesRef = ref(db, 'messages');
+
+    // Ação de Login
+    function login() {
+      const nameValue = usernameInput.value.trim();
+      if (nameValue === "") {
+        alert("Por favor, digite um nome válido.");
+        return;
+      }
+      username = nameValue;
+      userDisplay.textContent = `Logado como: ${username}`;
+      
+      // Troca de telas na interface
+      loginScreen.style.display = 'none';
+      chatScreen.style.display = 'flex';
+      
+      // Foca automaticamente no campo de mensagem
+      messageInput.focus();
+      
+      // Inicia a escuta de novas mensagens
+      startChatListener();
+    }
+
+    loginBtn.addEventListener('click', login);
+    usernameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
+
+    // Ação de Enviar Mensagem
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      if (text === "") return;
+
+      // Cria uma nova referência com ID único dentro do nó 'messages'
+      const newMessageRef = push(messagesRef);
+      
+      // Salva os dados no Firebase
+      set(newMessageRef, {
+        sender: username,
+        message: text,
+        timestamp: Date.now()
+      });
+
+      // Limpa o campo de texto
+      messageInput.value = "";
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // Escuta novas mensagens em tempo real (Firebase Listener)
+    function startChatListener() {
+      onChildAdded(messagesRef, (snapshot) => {
+        const data = snapshot.val();
+        renderMessage(data);
+      });
+    }
+
+    // Renderiza o balão de mensagem na tela
+    function renderMessage(data) {
+      const isMe = data.sender === username;
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', isMe ? 'me' : 'other');
+
+      // Formata a hora do envio
+      const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      messageDiv.innerHTML = `
+        <div class="meta">${isMe ? '' : data.sender + ' • '} ${time}</div>
+        <div class="bubble">${escapeHTML(data.message)}</div>
+      `;
+
+      messagesContainer.appendChild(messageDiv);
+      
+      // Auto-scroll para a última mensagem recebida
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Segurança básica contra injeção de HTML/XSS nas mensagens
+    function escapeHTML(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
